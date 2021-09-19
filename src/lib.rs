@@ -1,4 +1,4 @@
-use std::{borrow::Borrow, fmt};
+use std::{borrow::Borrow, fmt, vec};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum GameState {
@@ -32,16 +32,53 @@ pub enum Piece {
 }
 
 impl Piece {
-    fn get_available_moves(&self, game: Game) {
+    fn get_available_moves(&self, position: (u32, u32), game: Game) {
         match self {
             Piece::King => {}
             Piece::Queen => {}
-            Piece::Rook => {}
+            Piece::Rook => {
+                get_straight_movements(
+                    position,
+                    game.board[position.0 as usize][position.1 as usize]
+                        .as_ref()
+                        .unwrap()
+                        .1,
+                    game,
+                );
+            }
             Piece::Knight => {}
             Piece::Bishop => {}
             Piece::Pawn => {}
         }
     }
+}
+
+// Get movements
+fn get_straight_movements(position: (u32, u32), colour: Colour, game: Game) -> Vec<(u32, u32)> {
+    let mut positions: Vec<(u32, u32)> = Vec::default();
+
+    // Left
+    for _i in (position.0..0).rev() {
+        if game.board[_i as usize][position.1 as usize]
+            .as_ref()
+            .is_none()
+        {
+            positions.push((_i, position.1));
+            continue;
+        }
+
+        let piece_colour = game.board[_i as usize][position.1 as usize]
+            .as_ref()
+            .unwrap()
+            .1;
+        if piece_colour != colour {
+            positions.push((_i, position.1));
+        }
+
+        break;
+    }
+
+    positions
 }
 
 static FILES: [&str; 8] = ["a", "b", "c", "d", "e", "f", "g", "h"];
@@ -99,11 +136,36 @@ impl Game {
 
     /// Initialises a new board with pieces.
     pub fn new() -> Game {
-        Game {
+        let mut game = Game {
             /* initialise board, set active colour to white, ... */
             state: GameState::InProgress,
             board: Default::default(),
             turn: Colour::White,
+        };
+
+        // Set default pieces
+        game.set_default_pieces(Colour::White, 0, 1);
+        game.set_default_pieces(Colour::Black, 7, 6);
+
+        game.print_board();
+
+        game
+    }
+
+    fn set_default_pieces(&mut self, colour: Colour, main_row: usize, pawn_row: usize) {
+        self.board[0][main_row] = Some((Piece::Rook, colour));
+        self.board[1][main_row] = Some((Piece::Knight, colour));
+        self.board[2][main_row] = Some((Piece::Bishop, colour));
+
+        self.board[3][main_row] = Some((Piece::Queen, colour));
+        self.board[4][main_row] = Some((Piece::King, colour));
+
+        self.board[5][main_row] = Some((Piece::Bishop, colour));
+        self.board[6][main_row] = Some((Piece::Knight, colour));
+        self.board[7][main_row] = Some((Piece::Rook, colour));
+
+        for _i in 0..8 {
+            self.board[_i][pawn_row] = Some((Piece::Pawn, colour));
         }
     }
 
@@ -114,10 +176,10 @@ impl Game {
         let from = parse_position(_from);
         let to = parse_position(_to);
 
-        if (!check_for_colour(
+        if !check_for_colour(
             self.board[from.0 as usize][from.1 as usize].as_ref(),
             self.turn,
-        )) {
+        ) {
             return None;
         }
 
@@ -125,7 +187,7 @@ impl Game {
         let should_promote: bool = false;
 
         // Change turn
-        if (!should_promote) {
+        if !should_promote {
             self.change_turn();
         }
 
@@ -136,7 +198,7 @@ impl Game {
     pub fn set_promotion(&mut self, _piece: String) -> () {
         let piece = parse_piece(&_piece);
 
-        if (piece.is_none()) {
+        if piece.is_none() {
             return;
         }
 
@@ -152,7 +214,7 @@ impl Game {
             }
         };
 
-        if (promoted) {
+        if promoted {
             self.change_turn();
         }
     }
@@ -185,6 +247,47 @@ impl Game {
     pub fn get_possible_moves(&self, _postion: String) -> Option<Vec<String>> {
         None
     }
+
+    fn print_board(&self) {
+        println!("");
+        println!(". a b c d e f g h");
+
+        // Convert each piece to a unicode character and print it
+        for _y in 0..8 {
+            print!("{} ", _y + 1);
+
+            for _x in 0..8 {
+                if self.board[_x][_y].is_none() {
+                    print!("*");
+                } else {
+                    let piece = self.board[_x][_y].as_ref().unwrap();
+                    match piece.1 {
+                        Colour::White => match piece.0 {
+                            Piece::King => print!("♔"),
+                            Piece::Queen => print!("♕"),
+                            Piece::Rook => print!("♖"),
+                            Piece::Bishop => print!("♗"),
+                            Piece::Knight => print!("♘"),
+                            Piece::Pawn => print!("♙"),
+                        },
+                        Colour::Black => match piece.0 {
+                            Piece::King => print!("♚"),
+                            Piece::Queen => print!("♛"),
+                            Piece::Rook => print!("♜"),
+                            Piece::Bishop => print!("♝"),
+                            Piece::Knight => print!("♞"),
+                            Piece::Pawn => print!("♟"),
+                        },
+                    }
+                }
+
+                print!(" ");
+            }
+
+            // Jump to next line
+            println!("");
+        }
+    }
 }
 
 /// Implement print routine for Game.
@@ -203,8 +306,7 @@ impl Game {
 impl fmt::Debug for Game {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         /* build board representation string */
-
-        write!(f, "")
+        write!(f, "TEST")
     }
 }
 
