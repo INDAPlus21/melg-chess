@@ -32,45 +32,42 @@ pub enum Piece {
 }
 
 impl Piece {
-    fn get_available_moves(&self, position: (u32, u32), game: Game) {
-        match self {
-            Piece::King => {}
-            Piece::Queen => {}
-            Piece::Rook => {
-                get_straight_movements(
-                    position,
-                    game.board[position.0 as usize][position.1 as usize]
-                        .as_ref()
-                        .unwrap()
-                        .1,
-                    game,
-                );
-            }
-            Piece::Knight => {}
-            Piece::Bishop => {}
-            Piece::Pawn => {}
-        }
+    fn get_available_moves(
+        &self,
+        position: (usize, usize),
+        game: &mut Game,
+    ) -> Vec<(usize, usize)> {
+        return match self {
+            Piece::King => Default::default(),
+            Piece::Queen => Default::default(),
+            Piece::Rook => get_straight_movements(
+                position,
+                game.board[position.0][position.1].as_ref().unwrap().1,
+                game,
+            ),
+            Piece::Knight => Default::default(),
+            Piece::Bishop => Default::default(),
+            Piece::Pawn => Default::default(),
+        };
     }
 }
 
 // Get movements
-fn get_straight_movements(position: (u32, u32), colour: Colour, game: Game) -> Vec<(u32, u32)> {
-    let mut positions: Vec<(u32, u32)> = Vec::default();
+fn get_straight_movements(
+    position: (usize, usize),
+    colour: Colour,
+    game: &mut Game,
+) -> Vec<(usize, usize)> {
+    let mut positions: Vec<(usize, usize)> = Vec::default();
 
     // Left
     for _i in (position.0..0).rev() {
-        if game.board[_i as usize][position.1 as usize]
-            .as_ref()
-            .is_none()
-        {
+        if game.board[_i][position.1].as_ref().is_none() {
             positions.push((_i, position.1));
             continue;
         }
 
-        let piece_colour = game.board[_i as usize][position.1 as usize]
-            .as_ref()
-            .unwrap()
-            .1;
+        let piece_colour = game.board[_i][position.1].as_ref().unwrap().1;
         if piece_colour != colour {
             positions.push((_i, position.1));
         }
@@ -104,14 +101,14 @@ fn check_for_colour(position: Option<&(Piece, Colour)>, turn: Colour) -> bool {
 }
 
 // Parse data
-fn parse_position(_position: String) -> (u32, u32) {
+fn parse_position(_position: String) -> (usize, usize) {
     let file = FILES
         .iter()
         .position(|&s| s == _position.chars().nth(0).unwrap().to_string())
-        .unwrap() as u32;
+        .unwrap();
 
     // Offset by one as input is 1-8 whilst array is 0-7
-    let rank = _position.chars().nth(1).unwrap().to_digit(10).unwrap() - 1;
+    let rank = (_position.chars().nth(1).unwrap().to_digit(10).unwrap() - 1) as usize;
     return (file, rank);
 }
 
@@ -176,15 +173,31 @@ impl Game {
         let from = parse_position(_from);
         let to = parse_position(_to);
 
-        if !check_for_colour(
-            self.board[from.0 as usize][from.1 as usize].as_ref(),
-            self.turn,
-        ) {
+        if !check_for_colour(self.board[from.0][from.1].as_ref(), self.turn) {
             return None;
         }
 
+        let piece = self.board[from.0][from.1].as_ref().unwrap().0;
+        let available_moves: Vec<(usize, usize)> = piece.get_available_moves(from, self);
+
+        // Check if proposed move is valid
+        if !available_moves.contains(&to) {
+            return None;
+        }
+
+        // Make actual move
+        let piece = self.board[from.0][from.1].as_ref().unwrap().to_owned();
+        self.board[to.0][to.1] = Some(piece);
+        self.board[from.0][from.0] = None;
+
         // Check if should be promoted
-        let should_promote: bool = false;
+        let mut should_promote: bool = false;
+
+        if piece.0 == Piece::Pawn {
+            if (piece.1 == Colour::White && to.1 == 7) || (piece.1 == Colour::Black && to.1 == 0) {
+                should_promote = true;
+            }
+        }
 
         // Change turn
         if !should_promote {
