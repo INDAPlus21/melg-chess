@@ -34,17 +34,86 @@ pub enum Piece {
 impl Piece {
     fn get_available_moves(&self, position: (usize, usize), game: &Game) -> Vec<(usize, usize)> {
         return match self {
-            Piece::King => Default::default(),
-            Piece::Queen => Default::default(),
-            Piece::Rook => get_straight_movements(
-                position,
-                game.board[position.0][position.1].as_ref().unwrap().1,
-                game,
-            ),
-            Piece::Knight => Default::default(),
-            Piece::Bishop => Default::default(),
+            Piece::King => self.get_king_movement(position, &game),
+            Piece::Queen => {
+                let mut movements: Vec<(usize, usize)> = get_straight_movements(position, game);
+                movements.append(&mut get_diagonal_movements(position, game));
+                movements
+            }
+            Piece::Rook => get_straight_movements(position, game),
+            Piece::Knight => self.get_knight_movement(position, game),
+            Piece::Bishop => get_diagonal_movements(position, game),
             Piece::Pawn => self.get_pawn_movement(position, game),
         };
+    }
+
+    fn get_king_movement(&self, position: (usize, usize), game: &Game) -> Vec<(usize, usize)> {
+        let mut movements: Vec<(usize, usize)> = Vec::default();
+        let colour = game.board[position.0][position.1].as_ref().unwrap().1;
+
+        // Circle around the king
+        let offsets = vec![
+            (-1, 0),
+            (-1, 1),
+            (0, 1),
+            (1, 1),
+            (1, 0),
+            (1, -1),
+            (0, -1),
+            (-1, -1),
+        ];
+
+        movements.append(&mut self.get_movements_from_array(position, offsets, colour, game));
+
+        movements
+    }
+
+    fn get_knight_movement(&self, position: (usize, usize), game: &Game) -> Vec<(usize, usize)> {
+        let mut movements: Vec<(usize, usize)> = Vec::default();
+        let colour = game.board[position.0][position.1].as_ref().unwrap().1;
+
+        // Circle around the king
+        let offsets = vec![
+            (-2, 1),
+            (-1, 2),
+            (1, 2),
+            (1, 2),
+            (-1, 2),
+            (-2, 1),
+            (-1, -2),
+            (-2, -1),
+        ];
+
+        movements.append(&mut self.get_movements_from_array(position, offsets, colour, game));
+
+        movements
+    }
+
+    fn get_movements_from_array(
+        &self,
+        position: (usize, usize),
+        offsets: Vec<(i32, i32)>,
+        colour: Colour,
+        game: &Game,
+    ) -> Vec<(usize, usize)> {
+        let mut movements: Vec<(usize, usize)> = Default::default();
+
+        // Check each position if its valid
+        for _offset in offsets.iter() {
+            let mut x_position = add_i32_usize(position.0, _offset.0);
+            let mut y_position = add_i32_usize(position.1, _offset.1);
+            if !x_position.is_none() && !y_position.is_none() {
+                // Passive move
+                movements.append(&mut get_specific_movement(
+                    (x_position.unwrap(), y_position.unwrap()),
+                    colour,
+                    game,
+                    MovementMode::Both,
+                ));
+            }
+        }
+
+        movements
     }
 
     fn get_pawn_movement(&self, position: (usize, usize), game: &Game) -> Vec<(usize, usize)> {
@@ -59,12 +128,14 @@ impl Piece {
         let mut y_position = add_i32_usize(position.1, direction);
         if !y_position.is_none() {
             // Passive move
-            movements.append(&mut get_specific_movement(
+            let mut forward_move: Vec<(usize, usize)> = get_specific_movement(
                 (position.0, y_position.unwrap()),
                 colour,
                 game,
-                false,
-            ));
+                MovementMode::OnlyEmpty,
+            );
+            let forward_move_valid = !forward_move.is_empty();
+            movements.append(&mut forward_move);
 
             // Attack moves
             let x_position = add_i32_usize(position.0, -1);
@@ -73,7 +144,7 @@ impl Piece {
                     (x_position.unwrap(), y_position.unwrap()),
                     colour,
                     game,
-                    true,
+                    MovementMode::OnlyDifferent,
                 ));
             }
 
@@ -82,36 +153,36 @@ impl Piece {
                 (x_position.unwrap(), y_position.unwrap()),
                 colour,
                 game,
-                true,
+                MovementMode::OnlyDifferent,
             ));
-        }
 
-        // Special move - first move two steps forwards
-        if (colour == Colour::White && position.1 == 1)
-            || (colour == Colour::Black && position.1 == 6)
-        {
-            y_position = add_i32_usize(position.1, direction * 2);
-            if !y_position.is_none() {
-                movements.append(&mut get_specific_movement(
-                    (position.0, y_position.unwrap()),
-                    colour,
-                    game,
-                    false,
-                ));
+            // Special move - first move two steps forwards
+            if forward_move_valid {
+                if (colour == Colour::White && position.1 == 1)
+                    || (colour == Colour::Black && position.1 == 6)
+                {
+                    y_position = add_i32_usize(position.1, direction * 2);
+                    if !y_position.is_none() {
+                        movements.append(&mut get_specific_movement(
+                            (position.0, y_position.unwrap()),
+                            colour,
+                            game,
+                            MovementMode::OnlyEmpty,
+                        ));
+                    }
+                }
             }
         }
+
         println!("MOVEMENTS {:?}", movements);
         movements
     }
 }
 
 // Get movements
-fn get_straight_movements(
-    position: (usize, usize),
-    colour: Colour,
-    game: &Game,
-) -> Vec<(usize, usize)> {
+fn get_straight_movements(position: (usize, usize), game: &Game) -> Vec<(usize, usize)> {
     let mut positions: Vec<(usize, usize)> = Vec::default();
+    let colour = game.board[position.0][position.1].as_ref().unwrap().1;
 
     // Left
     for _i in (position.0..0).rev() {
@@ -128,24 +199,73 @@ fn get_straight_movements(
         break;
     }
 
+    // Right
+    for _i in position.0..8 {
+        if game.board[_i][position.1].as_ref().is_none() {
+            positions.push((_i, position.1));
+            continue;
+        }
+
+        let piece_colour = game.board[_i][position.1].as_ref().unwrap().1;
+        if piece_colour != colour {
+            positions.push((_i, position.1));
+        }
+
+        break;
+    }
+
+    // Down
+    for _i in (position.1..0).rev() {
+        if game.board[position.1][_i].as_ref().is_none() {
+            positions.push((position.1, _i));
+            continue;
+        }
+
+        let piece_colour = game.board[position.1][_i].as_ref().unwrap().1;
+        if piece_colour != colour {
+            positions.push((position.1, _i));
+        }
+
+        break;
+    }
+
+    // Up
+    for _i in position.1..8 {
+        if game.board[position.1][_i].as_ref().is_none() {
+            positions.push((position.1, _i));
+            continue;
+        }
+
+        let piece_colour = game.board[position.1][_i].as_ref().unwrap().1;
+        if piece_colour != colour {
+            positions.push((position.1, _i));
+        }
+
+        break;
+    }
+
     positions
 }
 
-fn get_diagonal_movements(
-    position: (usize, usize),
-    colour: Colour,
-    game: &Game,
-) -> Vec<(usize, usize)> {
+fn get_diagonal_movements(position: (usize, usize), game: &Game) -> Vec<(usize, usize)> {
     let mut positions: Vec<(usize, usize)> = Vec::default();
+    let colour = game.board[position.0][position.1].as_ref().unwrap().1;
 
     positions
+}
+
+#[derive(Copy, Clone, PartialEq)]
+pub enum MovementMode {
+    OnlyEmpty,
+    OnlyDifferent,
+    Both,
 }
 
 fn get_specific_movement(
     position: (usize, usize),
     colour: Colour,
     game: &Game,
-    only_other_colour: bool,
+    movement_mode: MovementMode,
 ) -> Vec<(usize, usize)> {
     let mut positions: Vec<(usize, usize)> = Vec::default();
 
@@ -154,8 +274,9 @@ fn get_specific_movement(
         return positions;
     }
 
-    if (!only_other_colour && game.board[position.0][position.1].as_ref().is_none())
-        || (only_other_colour
+    if ((movement_mode == MovementMode::OnlyEmpty || movement_mode == MovementMode::Both)
+        && game.board[position.0][position.1].as_ref().is_none())
+        || ((movement_mode == MovementMode::OnlyDifferent || movement_mode == MovementMode::Both)
             && !game.board[position.0][position.1].as_ref().is_none()
             && game.board[position.0][position.1].as_ref().unwrap().1 != colour)
     {
