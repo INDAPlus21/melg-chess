@@ -91,8 +91,8 @@ impl Piece {
         }
 
         // Special move - first move two steps forwards
-        if (colour == Colour::White && position.1 == 0)
-            || (colour == Colour::Black && position.1 == 7)
+        if (colour == Colour::White && position.1 == 1)
+            || (colour == Colour::Black && position.1 == 6)
         {
             y_position = add_i32_usize(position.1, direction * 2);
             if !y_position.is_none() {
@@ -106,14 +106,6 @@ impl Piece {
         }
         println!("MOVEMENTS {:?}", movements);
         movements
-    }
-}
-
-fn add_i32_usize(value: usize, difference: i32) -> Option<usize> {
-    if difference >= 0 {
-        return value.checked_add(difference as usize);
-    } else {
-        return value.checked_sub(-difference as usize);
     }
 }
 
@@ -177,6 +169,14 @@ fn get_specific_movement(
     positions
 }
 
+fn add_i32_usize(value: usize, difference: i32) -> Option<usize> {
+    if difference >= 0 {
+        return value.checked_add(difference as usize);
+    } else {
+        return value.checked_sub(-difference as usize);
+    }
+}
+
 static FILES: [&str; 8] = ["a", "b", "c", "d", "e", "f", "g", "h"];
 
 pub struct Game {
@@ -184,6 +184,7 @@ pub struct Game {
     state: GameState,
     board: [[Option<(Piece, Colour)>; 8]; 8],
     turn: Colour,
+    move_made: bool,
 }
 
 // Check if piece is correct colour for turn and not empty
@@ -228,6 +229,8 @@ impl Game {
         } else {
             self.turn = Colour::White;
         }
+
+        self.move_made = true;
     }
 
     /// Initialises a new board with pieces.
@@ -237,6 +240,7 @@ impl Game {
             state: GameState::InProgress,
             board: Default::default(),
             turn: Colour::White,
+            move_made: false,
         };
 
         // Set default pieces
@@ -269,6 +273,10 @@ impl Game {
     /// If the current game state is InProgress and the move is legal,
     /// move a piece and return the resulting state of the game.
     pub fn make_move(&mut self, _from: String, _to: String) -> Option<GameState> {
+        if (self.move_made) {
+            return None;
+        }
+
         let from = parse_position(_from);
         let to = parse_position(_to);
 
