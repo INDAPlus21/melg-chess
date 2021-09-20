@@ -1,4 +1,4 @@
-use std::{borrow::Borrow, fmt, vec};
+use std::{borrow::Borrow, cmp::min, fmt, vec};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum GameState {
@@ -34,7 +34,7 @@ pub enum Piece {
 impl Piece {
     fn get_available_moves(&self, position: (usize, usize), game: &Game) -> Vec<(usize, usize)> {
         return match self {
-            Piece::King => self.get_king_movement(position, &game),
+            Piece::King => self.get_king_movement(position, game),
             Piece::Queen => {
                 let mut movements: Vec<(usize, usize)> = get_straight_movements(position, game);
                 movements.append(&mut get_diagonal_movements(position, game));
@@ -100,8 +100,8 @@ impl Piece {
 
         // Check each position if its valid
         for _offset in offsets.iter() {
-            let mut x_position = add_i32_usize(position.0, _offset.0);
-            let mut y_position = add_i32_usize(position.1, _offset.1);
+            let x_position = add_i32_usize(position.0, _offset.0);
+            let y_position = add_i32_usize(position.1, _offset.1);
             if !x_position.is_none() && !y_position.is_none() {
                 // Passive move
                 movements.append(&mut get_specific_movement(
@@ -121,7 +121,7 @@ impl Piece {
         let mut direction: i32 = 1;
         let colour = game.board[position.0][position.1].as_ref().unwrap().1;
 
-        if (colour == Colour::Black) {
+        if colour == Colour::Black {
             direction = -1;
         }
 
@@ -174,7 +174,6 @@ impl Piece {
             }
         }
 
-        println!("MOVEMENTS {:?}", movements);
         movements
     }
 }
@@ -251,6 +250,93 @@ fn get_diagonal_movements(position: (usize, usize), game: &Game) -> Vec<(usize, 
     let mut positions: Vec<(usize, usize)> = Vec::default();
     let colour = game.board[position.0][position.1].as_ref().unwrap().1;
 
+    // Top left
+    let min_distance_to_edge = min(position.0, 7 - position.1);
+    positions.append(&mut get_moves_in_direction(
+        min_distance_to_edge,
+        position,
+        true,
+        false,
+        colour,
+        game,
+    ));
+
+    // Top right
+    let min_distance_to_edge = min(7 - position.0, 7 - position.1);
+    positions.append(&mut get_moves_in_direction(
+        min_distance_to_edge,
+        position,
+        false,
+        false,
+        colour,
+        game,
+    ));
+
+    // Bottom left
+    let min_distance_to_edge = min(position.0, position.1);
+    positions.append(&mut get_moves_in_direction(
+        min_distance_to_edge,
+        position,
+        true,
+        true,
+        colour,
+        game,
+    ));
+
+    // Bottom right
+    let min_distance_to_edge = min(7 - position.0, position.1);
+    positions.append(&mut get_moves_in_direction(
+        min_distance_to_edge,
+        position,
+        false,
+        true,
+        colour,
+        game,
+    ));
+
+    positions
+}
+
+fn get_moves_in_direction(
+    min_distance_to_edge: usize,
+    position: (usize, usize),
+    x_negative: bool,
+    y_negative: bool,
+    colour: Colour,
+    game: &Game,
+) -> Vec<(usize, usize)> {
+    let mut positions: Vec<(usize, usize)> = Default::default();
+
+    // Loop until reaching position at the edge of the board
+    for _offset in 1..(min_distance_to_edge + 1) {
+        let x_position: usize;
+        let y_position: usize;
+
+        if x_negative {
+            x_position = position.0 - _offset;
+        } else {
+            x_position = position.0 + _offset;
+        }
+
+        if y_negative {
+            y_position = position.1 - _offset;
+        } else {
+            y_position = position.1 + _offset;
+        }
+
+        if game.board[x_position][y_position].as_ref().is_none() {
+            positions.push((x_position, y_position));
+            continue;
+        }
+
+        let piece_colour = game.board[x_position][y_position].as_ref().unwrap().1;
+        if piece_colour != colour {
+            positions.push((x_position, y_position));
+        }
+
+        break;
+    }
+
     positions
 }
 
@@ -270,7 +356,7 @@ fn get_specific_movement(
     let mut positions: Vec<(usize, usize)> = Vec::default();
 
     // Make sure that the position is within the board
-    if (position.0 < 0 || position.0 >= 8 || position.1 < 0 || position.1 >= 8) {
+    if position.0 >= 8 || position.1 >= 8 {
         return positions;
     }
 
@@ -346,8 +432,8 @@ impl Game {
         } else {
             self.turn = Colour::White;
         }
-
-        self.move_made = true;
+        println!("TURN: {}", (self.turn == Colour::White));
+        self.move_made = false;
     }
 
     /// Initialises a new board with pieces.
@@ -403,7 +489,8 @@ impl Game {
 
         let piece = self.board[from.0][from.1].as_ref().unwrap().0;
         let available_moves: Vec<(usize, usize)> = piece.get_available_moves(from, self);
-        println!("{:?}", available_moves);
+        println!("AVAILABLE MOVES: {:?}", available_moves);
+        println!("PROPOSED MOVE: {:?} -> {:?}", from, to);
         // Check if proposed move is valid
         if !available_moves.contains(&to) {
             return None;
@@ -587,6 +674,10 @@ mod tests {
         //parse_position("f3".to_string());
         println!("{:?}", game.get_possible_moves("a2".to_string()));
         game.make_move("a2".to_string(), "a3".to_string());
+        game.make_move("c7".to_string(), "c5".to_string());
+        game.make_move("d2".to_string(), "d3".to_string());
+        game.make_move("d8".to_string(), "a5".to_string());
+        game.make_move("c1".to_string(), "e3".to_string());
         println!("{:?}", game);
 
         assert_eq!(game.get_game_state(), GameState::InProgress);
