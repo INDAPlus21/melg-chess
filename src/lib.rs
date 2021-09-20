@@ -32,11 +32,7 @@ pub enum Piece {
 }
 
 impl Piece {
-    fn get_available_moves(
-        &self,
-        position: (usize, usize),
-        game: &mut Game,
-    ) -> Vec<(usize, usize)> {
+    fn get_available_moves(&self, position: (usize, usize), game: &Game) -> Vec<(usize, usize)> {
         return match self {
             Piece::King => Default::default(),
             Piece::Queen => Default::default(),
@@ -51,7 +47,7 @@ impl Piece {
         };
     }
 
-    fn get_pawn_movement(&self, position: (usize, usize), game: &mut Game) -> Vec<(usize, usize)> {
+    fn get_pawn_movement(&self, position: (usize, usize), game: &Game) -> Vec<(usize, usize)> {
         let mut movements: Vec<(usize, usize)> = Vec::default();
         let mut direction: i32 = 1;
         let colour = game.board[position.0][position.1].as_ref().unwrap().1;
@@ -113,7 +109,7 @@ impl Piece {
 fn get_straight_movements(
     position: (usize, usize),
     colour: Colour,
-    game: &mut Game,
+    game: &Game,
 ) -> Vec<(usize, usize)> {
     let mut positions: Vec<(usize, usize)> = Vec::default();
 
@@ -138,7 +134,7 @@ fn get_straight_movements(
 fn get_diagonal_movements(
     position: (usize, usize),
     colour: Colour,
-    game: &mut Game,
+    game: &Game,
 ) -> Vec<(usize, usize)> {
     let mut positions: Vec<(usize, usize)> = Vec::default();
 
@@ -148,7 +144,7 @@ fn get_diagonal_movements(
 fn get_specific_movement(
     position: (usize, usize),
     colour: Colour,
-    game: &mut Game,
+    game: &Game,
     only_other_colour: bool,
 ) -> Vec<(usize, usize)> {
     let mut positions: Vec<(usize, usize)> = Vec::default();
@@ -273,7 +269,7 @@ impl Game {
     /// If the current game state is InProgress and the move is legal,
     /// move a piece and return the resulting state of the game.
     pub fn make_move(&mut self, _from: String, _to: String) -> Option<GameState> {
-        if (self.move_made) {
+        if self.move_made {
             return None;
         }
 
@@ -366,8 +362,22 @@ impl Game {
     /// new positions of that piece. Don't forget to the rules for check.
     ///
     /// (optional) Don't forget to include en passent and castling.
-    pub fn get_possible_moves(&self, _postion: String) -> Option<Vec<String>> {
-        None
+    pub fn get_possible_moves(&self, _position: String) -> Option<Vec<String>> {
+        let position = parse_position(_position);
+        if !check_for_colour(self.board[position.0][position.1].as_ref(), self.turn) {
+            return None;
+        }
+
+        let piece = self.board[position.0][position.1].as_ref().unwrap().0;
+        let available_moves = piece.get_available_moves(position, self.borrow());
+        let mut formatted_moves: Vec<String> = Default::default();
+
+        // Parse moves to printed format
+        for (_i, _move) in available_moves.iter().enumerate() {
+            formatted_moves.push(format!("{}{}", FILES[_move.0], _move.1 + 1));
+        }
+
+        Some(formatted_moves)
     }
 
     fn print_board(&self) {
@@ -454,6 +464,7 @@ mod tests {
     fn game_in_progress_after_init() {
         let mut game = Game::new();
         //parse_position("f3".to_string());
+        println!("{:?}", game.get_possible_moves("a2".to_string()));
         game.make_move("a2".to_string(), "a3".to_string());
         println!("{:?}", game);
 
