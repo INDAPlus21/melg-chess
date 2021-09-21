@@ -184,7 +184,7 @@ fn get_straight_movements(position: (usize, usize), game: &Game) -> Vec<(usize, 
     let colour = game.board[position.0][position.1].as_ref().unwrap().1;
 
     // Left
-    for _i in (position.0..0).rev() {
+    for _i in (0..position.1).rev() {
         if game.board[_i][position.1].as_ref().is_none() {
             positions.push((_i, position.1));
             continue;
@@ -199,7 +199,7 @@ fn get_straight_movements(position: (usize, usize), game: &Game) -> Vec<(usize, 
     }
 
     // Right
-    for _i in position.0..8 {
+    for _i in (position.0 + 1)..8 {
         if game.board[_i][position.1].as_ref().is_none() {
             positions.push((_i, position.1));
             continue;
@@ -214,7 +214,7 @@ fn get_straight_movements(position: (usize, usize), game: &Game) -> Vec<(usize, 
     }
 
     // Down
-    for _i in (position.1..0).rev() {
+    for _i in (0..position.1).rev() {
         if game.board[position.1][_i].as_ref().is_none() {
             positions.push((position.1, _i));
             continue;
@@ -229,7 +229,7 @@ fn get_straight_movements(position: (usize, usize), game: &Game) -> Vec<(usize, 
     }
 
     // Up
-    for _i in position.1..8 {
+    for _i in (position.1 + 1)..8 {
         if game.board[position.1][_i].as_ref().is_none() {
             positions.push((position.1, _i));
             continue;
@@ -675,9 +675,21 @@ mod tests {
         println!("{:?}", game.get_possible_moves("a2".to_string()));
         game.make_move("a2".to_string(), "a3".to_string());
         game.make_move("c7".to_string(), "c5".to_string());
+
         game.make_move("d2".to_string(), "d3".to_string());
         game.make_move("d8".to_string(), "a5".to_string());
+
         game.make_move("c1".to_string(), "e3".to_string());
+        game.make_move("h7".to_string(), "h5".to_string());
+
+        game.make_move("e3".to_string(), "c5".to_string());
+        game.make_move("h8".to_string(), "h6".to_string());
+
+        game.make_move("g1".to_string(), "h3".to_string());
+        game.make_move("h8".to_string(), "h6".to_string());
+
+        game.make_move("h3".to_string(), "f4".to_string());
+        game.make_move("h6".to_string(), "a6".to_string());
         println!("{:?}", game);
 
         assert_eq!(game.get_game_state(), GameState::InProgress);
