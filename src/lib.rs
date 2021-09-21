@@ -37,7 +37,9 @@ impl Piece {
             Piece::King => self.get_king_movement(position, game),
             Piece::Queen => {
                 let mut movements: Vec<(usize, usize)> = get_straight_movements(position, game);
-                movements.append(&mut get_diagonal_movements(position, game));
+                let mut diagonal_movements: Vec<(usize, usize)> =
+                    get_diagonal_movements(position, game);
+                movements.append(&mut diagonal_movements);
                 movements
             }
             Piece::Rook => get_straight_movements(position, game),
@@ -77,9 +79,9 @@ impl Piece {
             (-2, 1),
             (-1, 2),
             (1, 2),
-            (1, 2),
-            (-1, 2),
-            (-2, 1),
+            (2, 1),
+            (2, -1),
+            (1, -2),
             (-1, -2),
             (-2, -1),
         ];
@@ -184,15 +186,18 @@ fn get_straight_movements(position: (usize, usize), game: &Game) -> Vec<(usize, 
     let colour = game.board[position.0][position.1].as_ref().unwrap().1;
 
     // Left
-    for _i in (0..position.1).rev() {
-        if game.board[_i][position.1].as_ref().is_none() {
-            positions.push((_i, position.1));
+    let distance_to_edge = position.0;
+    for _i in 1..distance_to_edge {
+        let x_position = position.0 - _i;
+        println!("LEFT {}{}", x_position, position.1);
+        if game.board[x_position][position.1].as_ref().is_none() {
+            positions.push((x_position, position.1));
             continue;
         }
 
-        let piece_colour = game.board[_i][position.1].as_ref().unwrap().1;
+        let piece_colour = game.board[x_position][position.1].as_ref().unwrap().1;
         if piece_colour != colour {
-            positions.push((_i, position.1));
+            positions.push((x_position, position.1));
         }
 
         break;
@@ -200,6 +205,7 @@ fn get_straight_movements(position: (usize, usize), game: &Game) -> Vec<(usize, 
 
     // Right
     for _i in (position.0 + 1)..8 {
+        println!("RIGHT {}{}", _i, position.1);
         if game.board[_i][position.1].as_ref().is_none() {
             positions.push((_i, position.1));
             continue;
@@ -214,15 +220,18 @@ fn get_straight_movements(position: (usize, usize), game: &Game) -> Vec<(usize, 
     }
 
     // Down
-    for _i in (0..position.1).rev() {
-        if game.board[position.1][_i].as_ref().is_none() {
-            positions.push((position.1, _i));
+    let distance_to_edge = position.1;
+    for _i in 1..distance_to_edge {
+        let y_position = position.1 - _i;
+        println!("DOWN {}{}", position.0, y_position);
+        if game.board[position.0][y_position].as_ref().is_none() {
+            positions.push((position.0, y_position));
             continue;
         }
 
-        let piece_colour = game.board[position.1][_i].as_ref().unwrap().1;
+        let piece_colour = game.board[position.0][y_position].as_ref().unwrap().1;
         if piece_colour != colour {
-            positions.push((position.1, _i));
+            positions.push((position.0, y_position));
         }
 
         break;
@@ -230,14 +239,15 @@ fn get_straight_movements(position: (usize, usize), game: &Game) -> Vec<(usize, 
 
     // Up
     for _i in (position.1 + 1)..8 {
-        if game.board[position.1][_i].as_ref().is_none() {
-            positions.push((position.1, _i));
+        println!("UP {}{}", position.0, _i);
+        if game.board[position.0][_i].as_ref().is_none() {
+            positions.push((position.0, _i));
             continue;
         }
 
-        let piece_colour = game.board[position.1][_i].as_ref().unwrap().1;
+        let piece_colour = game.board[position.0][_i].as_ref().unwrap().1;
         if piece_colour != colour {
-            positions.push((position.1, _i));
+            positions.push((position.0, _i));
         }
 
         break;
@@ -450,7 +460,7 @@ impl Game {
         game.set_default_pieces(Colour::White, 0, 1);
         game.set_default_pieces(Colour::Black, 7, 6);
 
-        game.print_board();
+        game.print_board(None);
 
         game
     }
@@ -472,7 +482,7 @@ impl Game {
         }
     }
 
-    //"<file>(a-h)<rank>(0-8)"
+    //"<file>(a-h)<rank>(1-8)"
     /// If the current game state is InProgress and the move is legal,
     /// move a piece and return the resulting state of the game.
     pub fn make_move(&mut self, _from: String, _to: String) -> Option<GameState> {
@@ -496,6 +506,8 @@ impl Game {
             return None;
         }
 
+        self.print_board(Some(available_moves));
+
         // Make actual move
         let piece = self.board[from.0][from.1].as_ref().unwrap().to_owned();
         self.board[to.0][to.1] = Some(piece);
@@ -515,7 +527,7 @@ impl Game {
             self.change_turn();
         }
 
-        self.print_board();
+        self.print_board(None);
 
         Some(GameState::InProgress)
     }
@@ -588,7 +600,7 @@ impl Game {
         Some(formatted_moves)
     }
 
-    fn print_board(&self) {
+    fn print_board(&self, available_moves: Option<Vec<(usize, usize)>>) {
         println!("");
         println!(". a b c d e f g h");
 
@@ -597,7 +609,17 @@ impl Game {
             print!("{} ", _y + 1);
 
             for _x in 0..8 {
-                if self.board[_x][_y].is_none() {
+                if !available_moves.is_none()
+                    && available_moves.as_ref().unwrap().contains(&(_x, _y))
+                {
+                    if self.board[_x][_y].is_none() {
+                        // Movement
+                        print!("x");
+                    } else {
+                        // Attack
+                        print!("X");
+                    }
+                } else if self.board[_x][_y].is_none() {
                     print!("*");
                 } else {
                     let piece = self.board[_x][_y].as_ref().unwrap();
@@ -671,27 +693,33 @@ mod tests {
     #[test]
     fn game_in_progress_after_init() {
         let mut game = Game::new();
-        //parse_position("f3".to_string());
-        println!("{:?}", game.get_possible_moves("a2".to_string()));
-        game.make_move("a2".to_string(), "a3".to_string());
-        game.make_move("c7".to_string(), "c5".to_string());
 
-        game.make_move("d2".to_string(), "d3".to_string());
-        game.make_move("d8".to_string(), "a5".to_string());
+        test_move("a2", "a3", &mut game);
+        test_move("c7", "c5", &mut game);
 
-        game.make_move("c1".to_string(), "e3".to_string());
-        game.make_move("h7".to_string(), "h5".to_string());
+        test_move("d2", "d3", &mut game);
+        test_move("d8", "a5", &mut game);
 
-        game.make_move("e3".to_string(), "c5".to_string());
-        game.make_move("h8".to_string(), "h6".to_string());
+        test_move("c1", "e3", &mut game);
+        test_move("h7", "h5", &mut game);
 
-        game.make_move("g1".to_string(), "h3".to_string());
-        game.make_move("h8".to_string(), "h6".to_string());
+        test_move("e3", "c5", &mut game);
+        test_move("h8", "h6", &mut game);
 
-        game.make_move("h3".to_string(), "f4".to_string());
-        game.make_move("h6".to_string(), "a6".to_string());
-        println!("{:?}", game);
+        test_move("b1", "d2", &mut game);
+        test_move("h6", "f6", &mut game);
+
+        test_move("c5", "d6", &mut game);
+        test_move("f6", "d6", &mut game);
 
         assert_eq!(game.get_game_state(), GameState::InProgress);
+    }
+
+    fn test_move(_from: &str, _to: &str, game: &mut Game) {
+        // Test if move is valid
+        assert_eq!(
+            game.make_move(_from.to_string(), _to.to_string()).is_none(),
+            false
+        );
     }
 }
