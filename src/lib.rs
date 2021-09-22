@@ -32,7 +32,11 @@ pub enum Piece {
 }
 
 impl Piece {
-    fn get_available_moves(&self, position: (usize, usize), game: &Game) -> Vec<(usize, usize)> {
+    fn get_available_moves(
+        &self,
+        position: (usize, usize),
+        game: &mut Game,
+    ) -> Vec<(usize, usize)> {
         return match self {
             Piece::King => self.get_king_movement(position, game),
             Piece::Queen => {
@@ -49,7 +53,7 @@ impl Piece {
         };
     }
 
-    fn get_king_movement(&self, position: (usize, usize), game: &Game) -> Vec<(usize, usize)> {
+    fn get_king_movement(&self, position: (usize, usize), game: &mut Game) -> Vec<(usize, usize)> {
         let mut movements: Vec<(usize, usize)> = Vec::default();
         let colour = game.board[position.0][position.1].as_ref().unwrap().1;
 
@@ -70,7 +74,11 @@ impl Piece {
         movements
     }
 
-    fn get_knight_movement(&self, position: (usize, usize), game: &Game) -> Vec<(usize, usize)> {
+    fn get_knight_movement(
+        &self,
+        position: (usize, usize),
+        game: &mut Game,
+    ) -> Vec<(usize, usize)> {
         let mut movements: Vec<(usize, usize)> = Vec::default();
         let colour = game.board[position.0][position.1].as_ref().unwrap().1;
 
@@ -96,7 +104,7 @@ impl Piece {
         position: (usize, usize),
         offsets: Vec<(i32, i32)>,
         colour: Colour,
-        game: &Game,
+        game: &mut Game,
     ) -> Vec<(usize, usize)> {
         let mut movements: Vec<(usize, usize)> = Default::default();
 
@@ -118,7 +126,7 @@ impl Piece {
         movements
     }
 
-    fn get_pawn_movement(&self, position: (usize, usize), game: &Game) -> Vec<(usize, usize)> {
+    fn get_pawn_movement(&self, position: (usize, usize), game: &mut Game) -> Vec<(usize, usize)> {
         let mut movements: Vec<(usize, usize)> = Vec::default();
         let mut direction: i32 = 1;
         let colour = game.board[position.0][position.1].as_ref().unwrap().1;
@@ -181,7 +189,7 @@ impl Piece {
 }
 
 // Get movements
-fn get_straight_movements(position: (usize, usize), game: &Game) -> Vec<(usize, usize)> {
+fn get_straight_movements(position: (usize, usize), game: &mut Game) -> Vec<(usize, usize)> {
     let mut positions: Vec<(usize, usize)> = Vec::default();
     let colour = game.board[position.0][position.1].as_ref().unwrap().1;
 
@@ -254,7 +262,7 @@ fn get_straight_movements(position: (usize, usize), game: &Game) -> Vec<(usize, 
     positions
 }
 
-fn get_diagonal_movements(position: (usize, usize), game: &Game) -> Vec<(usize, usize)> {
+fn get_diagonal_movements(position: (usize, usize), game: &mut Game) -> Vec<(usize, usize)> {
     let mut positions: Vec<(usize, usize)> = Vec::default();
     let colour = game.board[position.0][position.1].as_ref().unwrap().1;
 
@@ -311,7 +319,7 @@ fn get_moves_in_direction(
     x_negative: bool,
     y_negative: bool,
     colour: Colour,
-    game: &Game,
+    game: &mut Game,
 ) -> Vec<(usize, usize)> {
     let mut positions: Vec<(usize, usize)> = Default::default();
 
@@ -358,7 +366,7 @@ pub enum MovementMode {
 fn get_specific_movement(
     position: (usize, usize),
     colour: Colour,
-    game: &Game,
+    game: &mut Game,
     movement_mode: MovementMode,
 ) -> Vec<(usize, usize)> {
     let mut positions: Vec<(usize, usize)> = Vec::default();
@@ -581,14 +589,15 @@ impl Game {
     /// new positions of that piece. Don't forget to the rules for check.
     ///
     /// (optional) Don't forget to include en passent and castling.
-    pub fn get_possible_moves(&self, _position: String) -> Option<Vec<String>> {
+    /// Changed &self to &mut self
+    pub fn get_possible_moves(&mut self, _position: String) -> Option<Vec<String>> {
         let position = parse_position(_position);
         if !check_for_colour(self.board[position.0][position.1].as_ref(), self.turn) {
             return None;
         }
 
         let piece = self.board[position.0][position.1].as_ref().unwrap().0;
-        let available_moves = piece.get_available_moves(position, self.borrow());
+        let available_moves = piece.get_available_moves(position, self);
         let mut formatted_moves: Vec<String> = Default::default();
 
         // Parse moves to printed format
