@@ -189,7 +189,7 @@ fn get_straight_movements(position: (usize, usize), game: &Game) -> Vec<(usize, 
     let distance_to_edge = position.0;
     for _i in 1..distance_to_edge {
         let x_position = position.0 - _i;
-        println!("LEFT {}{}", x_position, position.1);
+
         if game.board[x_position][position.1].as_ref().is_none() {
             positions.push((x_position, position.1));
             continue;
@@ -205,7 +205,6 @@ fn get_straight_movements(position: (usize, usize), game: &Game) -> Vec<(usize, 
 
     // Right
     for _i in (position.0 + 1)..8 {
-        println!("RIGHT {}{}", _i, position.1);
         if game.board[_i][position.1].as_ref().is_none() {
             positions.push((_i, position.1));
             continue;
@@ -223,7 +222,7 @@ fn get_straight_movements(position: (usize, usize), game: &Game) -> Vec<(usize, 
     let distance_to_edge = position.1;
     for _i in 1..distance_to_edge {
         let y_position = position.1 - _i;
-        println!("DOWN {}{}", position.0, y_position);
+
         if game.board[position.0][y_position].as_ref().is_none() {
             positions.push((position.0, y_position));
             continue;
@@ -239,7 +238,6 @@ fn get_straight_movements(position: (usize, usize), game: &Game) -> Vec<(usize, 
 
     // Up
     for _i in (position.1 + 1)..8 {
-        println!("UP {}{}", position.0, _i);
         if game.board[position.0][_i].as_ref().is_none() {
             positions.push((position.0, _i));
             continue;
@@ -510,6 +508,7 @@ impl Game {
 
         // Make actual move
         let piece = self.board[from.0][from.1].as_ref().unwrap().to_owned();
+
         self.board[to.0][to.1] = Some(piece);
         self.board[from.0][from.1] = None;
 
