@@ -4,6 +4,7 @@ use std::{cmp::min, vec};
 pub enum GameState {
     InProgress,
     Check,
+    Checkmate,
     GameOver,
 }
 
@@ -467,6 +468,30 @@ fn check_for_checked(colour_to_be_checked: Colour, game: &mut Game) -> bool {
     false
 }
 
+fn check_for_checkmate(colour_to_be_checked: Colour, game: &mut Game) -> bool {
+    // Loop through board and see if a colour has no available moves
+    for _x in 0..8 {
+        for _y in 0..8 {
+            if game.board[_x][_y].as_ref().is_none()
+                || game.board[_x][_y].as_ref().unwrap().1 != colour_to_be_checked
+            {
+                continue;
+            }
+
+            // Get all moves for the piece
+            let piece = game.board[_x][_y].as_ref().unwrap().to_owned();
+            let piece_moves = piece.0.get_available_moves((_x, _y), false, game);
+
+            // A single possible moves means that the colour is not in checkmat
+            if piece_moves.len() > 0 {
+                return false;
+            }
+        }
+    }
+
+    true
+}
+
 #[derive(Copy, Clone, PartialEq)]
 pub enum MovementMode {
     OnlyEmpty,
@@ -585,6 +610,10 @@ impl Game {
     /// If the current game state is InProgress and the move is legal,
     /// move a piece and return the resulting state of the game.
     pub fn make_move(&mut self, _from: String, _to: String) -> Option<GameState> {
+        if self.state == GameState::Checkmate {
+            self.state = GameState::GameOver;
+        }
+
         if self.move_made {
             return None;
         }
@@ -598,8 +627,10 @@ impl Game {
 
         let piece = self.board[from.0][from.1].as_ref().unwrap().0;
         let available_moves: Vec<(usize, usize)> = piece.get_available_moves(from, true, self);
+
         println!("AVAILABLE MOVES: {:?}", available_moves);
         println!("PROPOSED MOVE: {:?} -> {:?}", from, to);
+
         // Check if proposed move is valid
         if !available_moves.contains(&to) {
             return None;
@@ -613,17 +644,32 @@ impl Game {
         self.board[to.0][to.1] = Some(piece);
         self.board[from.0][from.1] = None;
 
-        // Check for check
+        // Update game state and check for check(mate)
         // All valid moves either doesn't cause check, check only the opponent of check both so a self check test is not required
-        if check_for_checked(
+        let checked = check_for_checked(
             if piece.1 == Colour::White {
                 Colour::Black
             } else {
                 Colour::White
             },
             self,
-        ) {
-            self.state = GameState::Check;
+        );
+
+        if checked {
+            let checkmated = check_for_checkmate(
+                if piece.1 == Colour::White {
+                    Colour::Black
+                } else {
+                    Colour::White
+                },
+                self,
+            );
+
+            if checkmated {
+                self.state = GameState::Checkmate;
+            } else {
+                self.state = GameState::Check;
+            }
         } else {
             self.state = GameState::InProgress;
         }
