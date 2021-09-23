@@ -478,7 +478,7 @@ fn check_for_checkmate(colour_to_be_checked: Colour, game: &mut Game) -> bool {
             {
                 continue;
             }
-            println!("POSITOIN CHECKED {} {}", _x, _y);
+
             // Get all moves for the piece
             let piece = game.board[_x][_y].as_ref().unwrap().to_owned();
             let piece_moves = piece.0.get_available_moves((_x, _y), true, game);
