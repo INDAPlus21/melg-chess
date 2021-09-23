@@ -1,4 +1,4 @@
-use std::{cmp::min, fmt, vec};
+use std::{cmp::min, vec};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum GameState {
@@ -7,10 +7,6 @@ pub enum GameState {
     GameOver,
 }
 
-/* IMPORTANT:
- * - Document well!
- * - Write well structured and clean code!
- */
 #[derive(Copy, Clone, PartialEq)]
 pub enum Colour {
     White,
@@ -769,26 +765,6 @@ impl Game {
             // Jump to next line
             println!("");
         }
-    }
-}
-
-/// Implement print routine for Game.
-///
-/// Output example:
-/// |:----------------------:|
-/// | R  Kn B  K  Q  B  Kn R |
-/// | P  P  P  P  P  P  P  P |
-/// | *  *  *  *  *  *  *  * |
-/// | *  *  *  *  *  *  *  * |
-/// | *  *  *  *  *  *  *  * |
-/// | *  *  *  *  *  *  *  * |
-/// | P  P  P  P  P  P  P  P |
-/// | R  Kn B  K  Q  B  Kn R |
-/// |:----------------------:|
-impl fmt::Debug for Game {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        /* build board representation string */
-        write!(f, "TEST")
     }
 }
 
