@@ -54,6 +54,8 @@ impl Piece {
         let mut valid_moves: Vec<(usize, usize)> = Default::default();
 
         if check_for_check {
+            let mut check_printed = false;
+
             for _move in available_moves.iter() {
                 // Test move
                 let piece = game.board[position.0][position.1]
@@ -88,7 +90,11 @@ impl Piece {
 
                 // Only add valid moves
                 if self_checked && !checked_opponent {
-                    println!("CHECKED: {:?}", position);
+                    if !check_printed {
+                        println!("MOVING PIECE WOULD CAUSE CHECK: {:?}", position);
+                        check_printed = true;
+                    }
+
                     continue;
                 }
 
@@ -664,7 +670,7 @@ impl Game {
                 },
                 self,
             );
-            println!("CHECKMATED {}", checkmated);
+
             if checkmated {
                 self.state = GameState::Checkmate;
             } else {
