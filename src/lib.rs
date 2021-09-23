@@ -65,6 +65,7 @@ impl Piece {
                 game.board[_move.0][_move.1] = Some(piece);
                 game.board[position.0][position.1] = None;
 
+                // Check for check
                 let self_checked = check_for_checked(piece.1, game);
 
                 let checked_opponent = check_for_checked(
@@ -85,7 +86,7 @@ impl Piece {
                     game.board[_move.0][_move.1] = Some(target_piece.unwrap());
                 }
 
-                // Remove invalid move
+                // Only add valid moves
                 if self_checked && !checked_opponent {
                     println!("CHECKED: {:?}", position);
                     continue;
@@ -477,10 +478,10 @@ fn check_for_checkmate(colour_to_be_checked: Colour, game: &mut Game) -> bool {
             {
                 continue;
             }
-
+            println!("POSITOIN CHECKED {} {}", _x, _y);
             // Get all moves for the piece
             let piece = game.board[_x][_y].as_ref().unwrap().to_owned();
-            let piece_moves = piece.0.get_available_moves((_x, _y), false, game);
+            let piece_moves = piece.0.get_available_moves((_x, _y), true, game);
 
             // A single possible moves means that the colour is not in checkmat
             if piece_moves.len() > 0 {
@@ -510,7 +511,6 @@ fn add_i32_usize(value: usize, difference: i32) -> Option<usize> {
 static FILES: [&str; 8] = ["a", "b", "c", "d", "e", "f", "g", "h"];
 
 pub struct Game {
-    /* save board, active colour, ... */
     state: GameState,
     board: [[Option<(Piece, Colour)>; 8]; 8],
     turn: Colour,
@@ -559,6 +559,7 @@ impl Game {
         } else {
             self.turn = Colour::White;
         }
+
         println!(
             "TURN: {}",
             if self.turn == Colour::White {
@@ -567,13 +568,13 @@ impl Game {
                 "Black"
             }
         );
+
         self.move_made = false;
     }
 
     /// Initialises a new board with pieces.
     pub fn new() -> Game {
         let mut game = Game {
-            /* initialise board, set active colour to white, ... */
             state: GameState::InProgress,
             board: Default::default(),
             turn: Colour::White,
@@ -606,7 +607,6 @@ impl Game {
         }
     }
 
-    //"<file>(a-h)<rank>(1-8)"
     /// If the current game state is InProgress and the move is legal,
     /// move a piece and return the resulting state of the game.
     pub fn make_move(&mut self, _from: String, _to: String) -> Option<GameState> {
@@ -664,7 +664,7 @@ impl Game {
                 },
                 self,
             );
-
+            println!("CHECKMATED {}", checkmated);
             if checkmated {
                 self.state = GameState::Checkmate;
             } else {
@@ -694,6 +694,7 @@ impl Game {
     }
 
     /// Set the piece type that a peasant becames following a promotion.
+    /// Possible values: "Queen", "Bishop", "Knight", "Rook"
     pub fn set_promotion(&mut self, _piece: String) -> () {
         let piece = parse_piece(&_piece);
 
@@ -740,9 +741,7 @@ impl Game {
     }
 
     /// If a piece is standing on the given tile, return all possible
-    /// new positions of that piece. Don't forget to the rules for check.
-    ///
-    /// (optional) Don't forget to include en passent and castling.
+    /// new positions of that piece.
     /// Changed &self to &mut self
     pub fn get_possible_moves(&mut self, _position: String) -> Option<Vec<String>> {
         let position = parse_position(_position);
@@ -826,7 +825,7 @@ mod tests {
 
     // Check a full game of chess
     #[test]
-    fn game_in_progress_after_init() {
+    fn test_whole_chess_game() {
         let mut game = Game::new();
 
         test_move("a2", "a3", &mut game);
@@ -838,7 +837,7 @@ mod tests {
         test_move("h2", "h3", &mut game);
         test_move("h7", "h5", &mut game);
 
-        test_move("e3", "e4", &mut game); // ERR
+        test_move("e3", "e4", &mut game);
         test_move("h8", "h6", &mut game);
 
         test_move("a1", "a2", &mut game);
@@ -862,7 +861,70 @@ mod tests {
         assert_eq!(game.get_game_state(), GameState::Check);
 
         test_move("e1", "d2", &mut game);
+
+        assert_eq!(game.get_game_state(), GameState::InProgress);
+
         test_move("e5", "e2", &mut game);
+
+        test_move("d2", "e2", &mut game);
+        test_move("d7", "d5", &mut game);
+
+        test_move("d1", "d3", &mut game);
+        test_move("h5", "h4", &mut game);
+
+        test_move("d3", "e3", &mut game);
+        test_move("a7", "a6", &mut game);
+
+        test_move("e3", "e5", &mut game);
+        test_move("a6", "a5", &mut game);
+
+        test_move("e5", "d5", &mut game);
+        test_move("a5", "a4", &mut game);
+
+        test_move("d5", "a5", &mut game);
+        test_move("g7", "g6", &mut game);
+
+        test_move("d4", "d5", &mut game);
+        test_move("h6", "f5", &mut game);
+
+        test_move("d5", "d6", &mut game);
+        test_move("f8", "h6", &mut game);
+
+        test_move("d6", "d7", &mut game);
+        test_move("e8", "f8", &mut game);
+
+        test_move("d7", "d8", &mut game);
+        game.set_promotion("Queen".to_string());
+        test_move("f8", "g7", &mut game);
+
+        test_move("b2", "b3", &mut game);
+        test_move("g6", "g5", &mut game);
+
+        test_move("h1", "h2", &mut game);
+        test_move("g5", "g4", &mut game);
+
+        test_move("h2", "h1", &mut game);
+        test_move("a8", "a6", &mut game);
+
+        test_move("h1", "h2", &mut game);
+        test_move("a6", "d6", &mut game);
+
+        test_move("a2", "b2", &mut game);
+        test_move("h6", "c1", &mut game);
+
+        test_move("h2", "h1", &mut game);
+        test_move("f6", "e6", &mut game);
+
+        test_move("a5", "e5", &mut game);
+        test_move("e6", "e5", &mut game);
+
+        test_move("d8", "f8", &mut game);
+        test_move("g7", "f8", &mut game);
+
+        assert_eq!(game.get_game_state(), GameState::Checkmate);
+
+        test_invalid_move("e2", "e3", &mut game);
+        assert_eq!(game.get_game_state(), GameState::GameOver);
     }
 
     fn test_move(_from: &str, _to: &str, game: &mut Game) {
