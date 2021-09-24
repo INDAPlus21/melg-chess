@@ -54,8 +54,6 @@ impl Piece {
         let mut valid_moves: Vec<(usize, usize)> = Default::default();
 
         if check_for_check {
-            let mut check_printed = false;
-
             for _move in available_moves.iter() {
                 // Test move
                 let piece = game.board[position.0][position.1]
@@ -90,11 +88,6 @@ impl Piece {
 
                 // Only add valid moves
                 if self_checked && !checked_opponent {
-                    if !check_printed {
-                        println!("MOVING PIECE WOULD CAUSE CHECK: {:?}", position);
-                        check_printed = true;
-                    }
-
                     continue;
                 }
 
@@ -153,6 +146,7 @@ impl Piece {
         movements
     }
 
+    // Convert an array to single specific moves
     fn get_movements_from_array(
         &self,
         position: (usize, usize),
@@ -241,6 +235,7 @@ impl Piece {
         movements
     }
 
+    // Add moves in the 4 directions if valid
     fn get_straight_movements(
         &self,
         position: (usize, usize),
@@ -318,6 +313,7 @@ impl Piece {
         positions
     }
 
+    // Add moves in the 4 diagonals if valid
     fn get_diagonal_movements(
         &self,
         position: (usize, usize),
@@ -373,6 +369,7 @@ impl Piece {
         positions
     }
 
+    // Add moves in a direction if valid
     fn get_moves_in_direction(
         &self,
         min_distance_to_edge: usize,
@@ -417,6 +414,7 @@ impl Piece {
         positions
     }
 
+    // Add a move at a specific location if valid
     fn get_specific_movement(
         &self,
         position: (usize, usize),
@@ -445,6 +443,7 @@ impl Piece {
     }
 }
 
+// Check if a colour is checked in the current board
 fn check_for_checked(colour_to_be_checked: Colour, game: &mut Game) -> bool {
     // Loop through board and see if any opponent piece has a move that takes the king. Checked colour is the colour to check if they can check the opponent
     for _x in 0..8 {
@@ -466,6 +465,7 @@ fn check_for_checked(colour_to_be_checked: Colour, game: &mut Game) -> bool {
                     && target_piece.unwrap().1 == colour_to_be_checked
                     && target_piece.unwrap().0 == Piece::King
                 {
+                    println!("CHECK: {} {}", _move.0, _move.1);
                     return true;
                 }
             }
@@ -475,6 +475,7 @@ fn check_for_checked(colour_to_be_checked: Colour, game: &mut Game) -> bool {
     false
 }
 
+// Check if any piece in the colour has any valid moves as that means that it's not checkmate
 fn check_for_checkmate(colour_to_be_checked: Colour, game: &mut Game) -> bool {
     // Loop through board and see if a colour has no available moves
     for _x in 0..8 {
@@ -489,7 +490,7 @@ fn check_for_checkmate(colour_to_be_checked: Colour, game: &mut Game) -> bool {
             let piece = game.board[_x][_y].as_ref().unwrap().to_owned();
             let piece_moves = piece.0.get_available_moves((_x, _y), true, game);
 
-            // A single possible moves means that the colour is not in checkmat
+            // A single possible moves means that the colour is not in checkmate
             if piece_moves.len() > 0 {
                 return false;
             }
@@ -499,6 +500,7 @@ fn check_for_checkmate(colour_to_be_checked: Colour, game: &mut Game) -> bool {
     true
 }
 
+// The mode of movement, can only move to empty squares, squares with opponent pieces or both?
 #[derive(Copy, Clone, PartialEq)]
 pub enum MovementMode {
     OnlyEmpty,
@@ -506,6 +508,7 @@ pub enum MovementMode {
     Both,
 }
 
+// Adds i32 and usize together in a way that prevents crashes, returns None if invalid
 fn add_i32_usize(value: usize, difference: i32) -> Option<usize> {
     if difference >= 0 {
         return value.checked_add(difference as usize);
@@ -725,6 +728,7 @@ impl Game {
         }
     }
 
+    // Find the correct piece to promote and promote it
     fn promote_piece(&mut self, piece: Option<Piece>, row: usize, colour: Colour) -> bool {
         // Check top row (white) / bottom row (black)
         for _i in 0..8 {
@@ -746,9 +750,8 @@ impl Game {
         self.state
     }
 
-    /// If a piece is standing on the given tile, return all possible
-    /// new positions of that piece.
-    /// Changed &self to &mut self
+    /// If a piece is standing on the given tile, return all possible new positions of that piece.
+    /// Not: changed &self to &mut self
     pub fn get_possible_moves(&mut self, _position: String) -> Option<Vec<String>> {
         let position = parse_position(_position);
         if !check_for_colour(self.board[position.0][position.1].as_ref(), self.turn) {
@@ -767,6 +770,7 @@ impl Game {
         Some(formatted_moves)
     }
 
+    // Prints out the entire board and a piece's avaiable moves if the available_moves variable is not none
     fn print_board(&self, available_moves: Option<Vec<(usize, usize)>>) {
         println!("");
         println!(". a b c d e f g h");
@@ -781,7 +785,7 @@ impl Game {
                 {
                     if self.board[_x][_y].is_none() {
                         // Movement
-                        print!("x");
+                        print!("+");
                     } else {
                         // Attack
                         print!("X");
