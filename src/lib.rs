@@ -623,6 +623,10 @@ impl Game {
             self.state = GameState::GameOver;
         }
 
+        if self.state == GameState::GameOver {
+            return None;
+        }
+
         if self.move_made {
             return None;
         }
@@ -751,8 +755,11 @@ impl Game {
     }
 
     /// If a piece is standing on the given tile, return all possible new positions of that piece.
-    /// Not: changed &self to &mut self
     pub fn get_possible_moves(&mut self, _position: String) -> Option<Vec<String>> {
+        if self.state == GameState::GameOver {
+            return None;
+        }
+
         let position = parse_position(_position);
         if !check_for_colour(self.board[position.0][position.1].as_ref(), self.turn) {
             return None;
