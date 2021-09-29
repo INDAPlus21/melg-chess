@@ -230,6 +230,35 @@ impl Piece {
                     }
                 }
             }
+
+            // Special moves - en passant
+            let x_position = add_i32_usize(position.0, -1);
+            if !x_position.is_none()
+                && !movements.contains(&(x_position.unwrap(), y_position.unwrap()))
+            {
+                if game.double_move_position == (x_position.unwrap(), position.1) {
+                    movements.append(&mut self.get_specific_movement(
+                        (x_position.unwrap(), y_position.unwrap()),
+                        colour,
+                        game,
+                        MovementMode::OnlyEmpty,
+                    ));
+                }
+            }
+
+            let x_position = add_i32_usize(position.0, 1);
+            if !x_position.is_none()
+                && !movements.contains(&(x_position.unwrap(), y_position.unwrap()))
+            {
+                if game.double_move_position == (x_position.unwrap(), position.1) {
+                    movements.append(&mut self.get_specific_movement(
+                        (x_position.unwrap(), y_position.unwrap()),
+                        colour,
+                        game,
+                        MovementMode::OnlyEmpty,
+                    ));
+                }
+            }
         }
 
         movements
@@ -524,6 +553,7 @@ pub struct Game {
     board: [[Option<(Piece, Colour)>; 8]; 8],
     turn: Colour,
     move_made: bool,
+    double_move_position: (usize, usize),
 }
 
 // Check if piece is correct colour for turn and not empty
@@ -588,6 +618,7 @@ impl Game {
             board: Default::default(),
             turn: Colour::White,
             move_made: false,
+            double_move_position: (100, 100),
         };
 
         // Set default pieces
@@ -654,8 +685,20 @@ impl Game {
         // Make actual move
         let piece = self.board[from.0][from.1].as_ref().unwrap().to_owned();
 
+        // Remove pawn if move was a en passant move
+        if piece.0 == Piece::Pawn && from.0 != to.0 && self.board[to.0][to.1].is_none() {
+            self.board[to.0][from.1] = None;
+        }
+
         self.board[to.0][to.1] = Some(piece);
         self.board[from.0][from.1] = None;
+
+        // Detect if move allows for potensial en passant (moved pawn two steps forward)
+        if piece.0 == Piece::Pawn && (to.1 as i32 - from.1 as i32).abs() == 2 {
+            self.double_move_position = to;
+        } else {
+            self.double_move_position = (100, 100);
+        }
 
         // Update game state and check for check(mate)
         // All valid moves either doesn't cause check, check only the opponent of check both so a self check test is not required
@@ -942,6 +985,26 @@ mod tests {
 
         test_invalid_move("e2", "e3", &mut game);
         assert_eq!(game.get_game_state(), GameState::GameOver);
+    }
+
+    // Test en passant
+    #[test]
+    fn test_en_passant() {
+        let mut game = Game::new();
+
+        test_move("h2", "h3", &mut game);
+        test_move("a7", "a6", &mut game);
+
+        test_move("h3", "h4", &mut game);
+        test_move("a6", "a5", &mut game);
+
+        test_move("h4", "h5", &mut game);
+        test_move("a5", "a4", &mut game);
+
+        test_move("e2", "e3", &mut game);
+        test_move("g7", "g5", &mut game);
+
+        test_move("h5", "g6", &mut game);
     }
 
     fn test_move(_from: &str, _to: &str, game: &mut Game) {
